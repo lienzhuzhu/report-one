@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="./styles.css" rel="stylesheet">
+    <title>Apache vs Nginx</title>
+</head>
+<body>
+
+    <h1>Comparing Apache and Nginx Web Servers</h1>
+    <div class="logo-container">
+        <img src="feather.png" alt="apache logo" class="logo">
+        <img src="nginx.png" alt="nginx logo" class="smaller-logo">
+    </div>
+
+    <section class="motivation">
+        <h2>Motivation</h2>
+        <p>
+            Apache HTTP Server (Apache) and Nginx are popular open source web servers. 
+            Nginx was developed to serve content faster than Apache with 
+            less overhead. But are all types of content served faster with Nginx?
+        </p>
+    </section>
+
+    <section class="experiment-setup">
+        <h2>Experimental Set Up</h2>
+        <p>
+            Apache HTTP 2.4.53 and Nginx 1.20.0 were installed on 
+            an AWS EC2 T2 Micro instance running Amazon Linux 2 x86 Kernel-5.10, SSD. 
+        </p>
+        <p>
+            To test the two web servers for speed in serving different content types, one HTML 
+            file of size 206 bytes, one PHP file containing only the phpinfo() function that displays PHP config 
+            information, and one JPG of size 35 kbytes were placed in each web server's default root directory
+            as testing endpoints.
+        </p>
+        <p>
+            Apache Bench (ab) was run using another AWS EC2 T2 Micro instance running Apache HTTP 2.4.53
+            on Amazon Linux 2 Kernel-5.10 as the request generating machine. A total of 10,000 requests
+            were sent to each endpoint at a concurrency level of 1000. The generating machine was not 
+            a part of the same VPC as the host machine. Requests per second and time to fulfill a request 
+            were measured.
+        </p>
+    </section>
+
+    <section class="results">
+        <h2>Results</h2>
+        <p>
+            Nginx was faster than Apache in serving static content but Apache handled dynamic content 
+            faster as seen in Figure 1. Nginx was able to serve more static file requests per second 
+            (Fig. 1a) but took longer to serve dynamic PHP files (Fig. 1b).
+        </p>
+
+        <div class="halves-container">
+            <figure>
+                <img src="requests.png" alt="graph" class="figure-img">
+                <figcaption class="figure-caption">
+                    Figure 1a. Requests per second when Apache and Nginx serve three file types. Time 
+                    per request was measured across all concurrent requests.
+                </figcaption>
+            </figure>
+            <figure>
+                <img src="time.png" alt="graph" class="figure-img">
+                <figcaption class="figure-caption">
+                    Figure 1b. Time per request for Apache and Nginx to serve three file types. Time 
+                    per request was measured across all concurrent requests.
+                </figcaption>
+            </figure>
+        </div>
+
+        <p>
+            To visualize the passage of time as the concurrent requests were fulfilled, GNUPlot was used 
+            to graph cumulative total time taken as requests were completed (Figure 2). For HTML and JPG 
+            content NGINX fulfills all 10,000 requests in less total time whereas it takes slightly longer 
+            to handle PHP (Fig. 2b).
+        </p>
+
+        <div class="thirds-container">
+            <figure>
+                <img src="html.png" alt="graph" class="figure-img">
+                <figcaption class="figure-caption">
+                    Figure 2a. Time passed as Apache and Nginx serve concurrent requests of an HTML page.
+                </figcaption>
+            </figure>
+            <figure>
+                <img src="php.png" alt="graph" class="figure-img">
+                <figcaption class="figure-caption">
+                    Figure 2b. Time passed as Apache and Nginx handle concurrent requests of a PHP script.
+                </figcaption>
+            </figure>
+            <figure>
+                <img src="jpg.png" alt="graph" class="figure-img">
+                <figcaption class="figure-caption">
+                    Figure 2c. Time passed as Apache and Nginx serve concurrent requests of a JPG file.
+                </figcaption>
+            </figure>
+        </div>
+    </section>
+
+    <section class="discussion">
+        <h2>Discussion</h2>
+        <p>
+            Nginx was able to outperform Apache for static HTML and JPG files. However, for dynamic content
+            like PHP it was slightly outperformed by Apache. This was reasonable to expect because Apache embeds 
+            dynamic content language processors into each worker instance so it is able to handle dynamic content 
+            execution internally. Nginx cannot process dynamic content natively and 
+            must use a reverse proxy to hand off the dynamic content processing to an
+            external interpretor such as Apache. But this means Nginx does not have the overhead of having the 
+            language processor present for static content and is faster when serving static content. However, the
+            need to wait for an external processor to handle dynamic pages presents a bottleneck for Nginx.
+        </p>
+        <p>
+            The architecture of each web server extends beyond the presence or lack of a dynamic language processor.
+            Nginx is asynchronous, non-blocking, and event-driven while Apache uses an essentially multi-threaded structure.
+            Nginx worker processes handles connections by placing them in an event loop similar to how NodeJS handles processes
+            and continuouly checking for new events to add to the loop. As events are processed they are removed from the loop.
+            Apache users have the capability to configure what processing modules Apache uses but all use the general
+            thread-based approach. Apache has the bottleneck of relying on the processing of these threads before new 
+            connections can be made and their requests executed.
+        </p>
+        <p>
+            Apache also has a distributed configuration system where users can configure the web server for each content
+            directory with .htaccess files. When handling a request, Apache has to check for these files in each component of the 
+            requested path. Nginx centralizes configuration to the default configuration file. This boosts the performance of Nginx
+            over Apache for static file reads because it does not have to search for these .htaccess files and interpret 
+            them, it just takes the configurations from the central file.
+        </p>
+        <p>
+            Overall, both web servers have their advantages and disadvantages. Apache comes with a hefty amount of 
+            configuration capability and native dynamic content processing whereas Nginx ditches much of the bulk to 
+            make static content serving faster but relies on external support for dynamic content handling. One possible 
+            tech stack might use Nginx primarily with a reverse proxy connection to an Apache server to handle dynamic 
+            content.
+        </p>
+    </section>
+
+</body>
+</html>
